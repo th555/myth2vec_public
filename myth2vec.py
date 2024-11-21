@@ -27,6 +27,8 @@ class MythCorpus(TextCorpus):
     def getstream(self):
         num_texts = 0
         for i, filename in enumerate(os.listdir(self.input)):
+            if not filename.endswith('.txt'):
+                continue
             filepath = os.path.join(corpus_dir, filename)
             with open(filepath, 'r') as f:
                 for line in f.readlines():
