@@ -75,7 +75,8 @@ if os.path.exists(modelpickle_filename):
     model = Word2Vec.load(modelpickle_filename)
 else:
     print("BUILDING NEW MODEL AND SAVING WHEN DONE")
-    model = Word2Vec(sentences=corpus, vector_size=200)
+    # sg=1 means use skip-gram, like in the reference paper
+    model = Word2Vec(sentences=corpus, vector_size=200, sg=1)
     model.save(modelpickle_filename)
 
 
