@@ -72,6 +72,5 @@ else:
     corpus = MythCorpus(corpus_dir)
     corpus.dictionary.save(pickle_filename)
 
-exit()
 
 model = Word2Vec(sentences=corpus, vector_size=200)
