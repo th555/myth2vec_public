@@ -1,4 +1,5 @@
 from gensim.corpora.textcorpus import TextCorpus
+from gensim.corpora.dictionary import Dictionary
 from gensim.models import Word2Vec
 import os
 import logging
@@ -7,7 +8,7 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 
 """ Requires corpus as .txt files in ../MythFic_txt/ """
 
-corpus_dir = '../MythFic_txt/'
+corpus_dir = '../MythFic_mini/'
 assert corpus_dir.endswith('/')
 
 
@@ -59,15 +60,18 @@ class MythCorpus(TextCorpus):
 
         self.length = num_texts
 
-    
-pickle_filename = f'{corpus_dir[:-1]}.corpuspickle'
+# Save/load dictionary because it is time consuming
+pickle_filename = f'{corpus_dir[:-1]}.dictionarypickle'
 if os.path.exists(pickle_filename):
-    print("LOADING SAVED CORPUS PICKLE")
-    corpus = MythCorpus()
-    corpus.load(pickle_filename)
+    print("LOADING DICTIONARY FROM PICKLE")
+    dictionary = Dictionary()
+    dictionary.load(pickle_filename)
+    corpus = MythCorpus(corpus_dir, dictionary=dictionary)
 else:
-    print("BUILDLING NEW CORPUS AND SAVING WHEN DONE")
+    print("BUILDING NEW DICTIONARY AND SAVING WHEN DONE")
     corpus = MythCorpus(corpus_dir)
-    corpus.save(pickle_filename)
+    corpus.dictionary.save(pickle_filename)
 
-# model = Word2Vec(sentences=corpus, vector_size=200)
+exit()
+
+model = Word2Vec(sentences=corpus, vector_size=200)
