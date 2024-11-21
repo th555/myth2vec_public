@@ -69,4 +69,4 @@ else:
     corpus = MythCorpus(corpus_dir)
     corpus.save(pickle_filename)
 
-# model = Word2Vec(sentences=corpus, vector_size=200)
+model = Word2Vec(sentences=corpus, vector_size=200)
