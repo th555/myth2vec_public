@@ -7,7 +7,7 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 
 """ Requires corpus as .txt files in ../MythFic_txt/ """
 
-corpus_dir = '../MythFic_txt/'
+corpus_dir = '../MythFic_mini/'
 assert corpus_dir.endswith('/')
 
 
@@ -59,7 +59,6 @@ class MythCorpus(TextCorpus):
 
         self.length = num_texts
 
-    
 corpuspickle_filename = f'{corpus_dir[:-1]}.corpuspickle'
 if os.path.exists(corpuspickle_filename):
     print("LOADING SAVED CORPUS PICKLE")
@@ -69,6 +68,15 @@ else:
     corpus = MythCorpus(corpus_dir)
     corpus.save(corpuspickle_filename)
 
+class CorpusIter:
+    """ Get the preprocessed sentences from the corpus in plaintext form, instead of
+    (numerical) dictionary keys, saves a lot of hassle later. """
+    def __init__(self, corpus):
+        self.corpus = corpus
+
+    def __iter__(self):
+        return corpus.get_texts()
+
 modelpickle_filename = f'{corpus_dir[:-1]}.modelpickle'
 if os.path.exists(modelpickle_filename):
     print("LOADING SAVED MODEL")
@@ -76,7 +84,8 @@ if os.path.exists(modelpickle_filename):
 else:
     print("BUILDING NEW MODEL AND SAVING WHEN DONE")
     # sg=1 means use skip-gram, like in the reference paper
-    model = Word2Vec(sentences=corpus, vector_size=200, sg=1)
+    model = Word2Vec(sentences=CorpusIter(corpus), vector_size=200, sg=1)
     model.save(modelpickle_filename)
 
-
+from plotumap import plot_model
+plot_model(model.wv)
