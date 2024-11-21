@@ -7,7 +7,7 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 
 """ Requires corpus as .txt files in ../MythFic_txt/ """
 
-corpus_dir = '../MythFic_mini/'
+corpus_dir = '../MythFic_txt/'
 assert corpus_dir.endswith('/')
 
 
@@ -60,13 +60,22 @@ class MythCorpus(TextCorpus):
         self.length = num_texts
 
     
-pickle_filename = f'{corpus_dir[:-1]}.corpuspickle'
-if os.path.exists(pickle_filename):
+corpuspickle_filename = f'{corpus_dir[:-1]}.corpuspickle'
+if os.path.exists(corpuspickle_filename):
     print("LOADING SAVED CORPUS PICKLE")
-    corpus = MythCorpus.load(pickle_filename)
+    corpus = MythCorpus.load(corpuspickle_filename)
 else:
-    print("BUILDLING NEW CORPUS AND SAVING WHEN DONE")
+    print("BUILDING NEW CORPUS AND SAVING WHEN DONE")
     corpus = MythCorpus(corpus_dir)
-    corpus.save(pickle_filename)
+    corpus.save(corpuspickle_filename)
 
-model = Word2Vec(sentences=corpus, vector_size=200)
+modelpickle_filename = f'{corpus_dir[:-1]}.modelpickle'
+if os.path.exists(modelpickle_filename):
+    print("LOADING SAVED MODEL")
+    model = Word2Vec.load(modelpickle_filename)
+else:
+    print("BUILDING NEW MODEL AND SAVING WHEN DONE")
+    model = Word2Vec(sentences=corpus, vector_size=200)
+    model.save(modelpickle_filename)
+
+
