@@ -1,5 +1,4 @@
 from gensim.corpora.textcorpus import TextCorpus
-from gensim.corpora.dictionary import Dictionary
 from gensim.models import Word2Vec
 import os
 import logging
@@ -60,17 +59,14 @@ class MythCorpus(TextCorpus):
 
         self.length = num_texts
 
-# Save/load dictionary because it is time consuming
-pickle_filename = f'{corpus_dir[:-1]}.dictionarypickle'
+    
+pickle_filename = f'{corpus_dir[:-1]}.corpuspickle'
 if os.path.exists(pickle_filename):
-    print("LOADING DICTIONARY FROM PICKLE")
-    dictionary = Dictionary()
-    dictionary.load(pickle_filename)
-    corpus = MythCorpus(corpus_dir, dictionary=dictionary)
+    print("LOADING SAVED CORPUS PICKLE")
+    corpus = MythCorpus.load(pickle_filename)
 else:
-    print("BUILDING NEW DICTIONARY AND SAVING WHEN DONE")
+    print("BUILDLING NEW CORPUS AND SAVING WHEN DONE")
     corpus = MythCorpus(corpus_dir)
-    corpus.dictionary.save(pickle_filename)
+    corpus.save(pickle_filename)
 
-
-model = Word2Vec(sentences=corpus, vector_size=200)
+# model = Word2Vec(sentences=corpus, vector_size=200)
