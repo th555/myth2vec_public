@@ -90,10 +90,11 @@ else:
 wv = model.wv
 
 # Some analogies e.g. man : king :: woman : ?queen?
-wv.most_similar_cosmul(positive=['woman', 'king'], negative=['man'])
-wv.similar_by_word('harry')
+print(wv.most_similar_cosmul(positive=['woman', 'king'], negative=['man']))
+print(wv.similar_by_word('harry'))
 
-import pdb; pdb.set_trace()
+# import pdb; pdb.set_trace()
 
-from plotumap import plot_model
-plot_model(wv)
+if __name__ == '__main__':
+    from plotumap import plot_model
+    plot_model(wv)
