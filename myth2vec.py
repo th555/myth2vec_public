@@ -7,7 +7,7 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 
 """ Requires corpus as .txt files in ../MythFic_txt/ """
 
-corpus_dir = '../MythFic_mini/'
+corpus_dir = '../MythFic_txt/'
 assert corpus_dir.endswith('/')
 
 
@@ -84,8 +84,16 @@ if os.path.exists(modelpickle_filename):
 else:
     print("BUILDING NEW MODEL AND SAVING WHEN DONE")
     # sg=1 means use skip-gram, like in the reference paper
-    model = Word2Vec(sentences=CorpusIter(corpus), vector_size=200, sg=1)
+    model = Word2Vec(sentences=CorpusIter(corpus), vector_size=300, sg=1, epochs=10)
     model.save(modelpickle_filename)
 
+wv = model.wv
+
+# Some analogies e.g. man : king :: woman : ?queen?
+wv.most_similar_cosmul(positive=['woman', 'king'], negative=['man'])
+wv.similar_by_word('harry')
+
+import pdb; pdb.set_trace()
+
 from plotumap import plot_model
-plot_model(model.wv)
+plot_model(wv)

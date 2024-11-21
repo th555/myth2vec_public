@@ -12,7 +12,7 @@ import plotly
 import plotly.graph_objs as go
 
 
-def plot_model(wv):
+def plot_model(wv, min_count=100):
     """ Gensim api changed since this script was made, get vectors and labels as in
     https://radimrehurek.com/gensim/auto_examples/tutorials/run_word2vec.html#sphx-glr-auto-examples-tutorials-run-word2vec-py
     """
@@ -20,6 +20,12 @@ def plot_model(wv):
     words = np.asarray(wv.index_to_key)
     counts = np.asarray([wv.get_vecattr(word, 'count') for word in words])
     logcounts = np.log10(counts) # for colouring
+
+    if min_count:
+        vectors = vectors[counts>=min_count]
+        words = words[counts>=min_count]
+        logcounts = logcounts[counts>=min_count]
+        counts = counts[counts>=min_count]
 
     embedding = umap.UMAP().fit_transform(vectors)
 
@@ -45,7 +51,7 @@ def plot_model(wv):
         text=tooltips
     )
 
-    layout = dict(title = 'Word2Vec Google News- 2D UMAP Embeddings',
+    layout = dict(title = 'Word2Vec Mythfic - 2D UMAP Embeddings',
                   yaxis = dict(zeroline = False),
                   xaxis = dict(zeroline = False),
                   hovermode = 'closest'
