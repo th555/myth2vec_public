@@ -11,9 +11,6 @@ corpus_dir = '../MythFic_txt/'
 assert corpus_dir.endswith('/')
 
 
-method = "word2vec" # fasttext or word2vec
-
-
 class MythCorpus(TextCorpus):
     """
     Does some preprocessing by default:
@@ -83,31 +80,17 @@ class CorpusIter:
         return corpus.get_texts()
 
 
-match method:
-    case "word2vec":
-        modelpickle_filename = f'{corpus_dir[:-1]}.w2v_modelpickle'
-        if os.path.exists(modelpickle_filename):
-            print("LOADING SAVED MODEL")
-            model = Word2Vec.load(modelpickle_filename)
-        else:
-            print("BUILDING NEW MODEL AND SAVING WHEN DONE")
-            # sg=1 means use skip-gram, like in the reference paper
-            model = Word2Vec(sentences=CorpusIter(corpus), vector_size=300, sg=1, epochs=10)
-            model.save(modelpickle_filename)
+modelpickle_filename = f'{corpus_dir[:-1]}.w2v_modelpickle'
+if os.path.exists(modelpickle_filename):
+    print("LOADING SAVED MODEL")
+    model = Word2Vec.load(modelpickle_filename)
+else:
+    print("BUILDING NEW MODEL AND SAVING WHEN DONE")
+    # sg=1 means use skip-gram, like in the reference paper
+    model = Word2Vec(sentences=CorpusIter(corpus), vector_size=300, sg=1, epochs=10)
+    model.save(modelpickle_filename)
 
-        wv = model.wv
-    case "fasttext":
-        modelpickle_filename = f'{corpus_dir[:-1]}.ft_modelpickle'
-        if os.path.exists(modelpickle_filename):
-            print("LOADING SAVED MODEL")
-            model = Word2Vec.load(modelpickle_filename)
-        else:
-            print("BUILDING NEW MODEL AND SAVING WHEN DONE")
-            # sg=1 means use skip-gram, like in the reference paper
-            model = FastText(sentences=CorpusIter(corpus), vector_size=300, sg=1, epochs=10)
-            model.save(modelpickle_filename)
-
-        wv = model.wv
+    wv = model.wv
 
 # Some analogies e.g. man : king :: woman : ?queen?
 print(wv.most_similar_cosmul(positive=['woman', 'king'], negative=['man']))
