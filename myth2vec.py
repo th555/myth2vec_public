@@ -1,5 +1,5 @@
 from gensim.corpora.textcorpus import TextCorpus
-from gensim.models import Word2Vec
+from gensim.models import Word2Vec, FastText
 import os
 import logging
 
@@ -9,6 +9,9 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 
 corpus_dir = '../MythFic_txt/'
 assert corpus_dir.endswith('/')
+
+
+method = "word2vec" # fasttext or word2vec
 
 
 class MythCorpus(TextCorpus):
@@ -79,23 +82,38 @@ class CorpusIter:
     def __iter__(self):
         return corpus.get_texts()
 
-modelpickle_filename = f'{corpus_dir[:-1]}.modelpickle'
-if os.path.exists(modelpickle_filename):
-    print("LOADING SAVED MODEL")
-    model = Word2Vec.load(modelpickle_filename)
-else:
-    print("BUILDING NEW MODEL AND SAVING WHEN DONE")
-    # sg=1 means use skip-gram, like in the reference paper
-    model = Word2Vec(sentences=CorpusIter(corpus), vector_size=300, sg=1, epochs=10)
-    model.save(modelpickle_filename)
 
-wv = model.wv
+match method:
+    case "word2vec":
+        modelpickle_filename = f'{corpus_dir[:-1]}.w2v_modelpickle'
+        if os.path.exists(modelpickle_filename):
+            print("LOADING SAVED MODEL")
+            model = Word2Vec.load(modelpickle_filename)
+        else:
+            print("BUILDING NEW MODEL AND SAVING WHEN DONE")
+            # sg=1 means use skip-gram, like in the reference paper
+            model = Word2Vec(sentences=CorpusIter(corpus), vector_size=300, sg=1, epochs=10)
+            model.save(modelpickle_filename)
+
+        wv = model.wv
+    case "fasttext":
+        modelpickle_filename = f'{corpus_dir[:-1]}.ft_modelpickle'
+        if os.path.exists(modelpickle_filename):
+            print("LOADING SAVED MODEL")
+            model = Word2Vec.load(modelpickle_filename)
+        else:
+            print("BUILDING NEW MODEL AND SAVING WHEN DONE")
+            # sg=1 means use skip-gram, like in the reference paper
+            model = FastText(sentences=CorpusIter(corpus), vector_size=300, sg=1, epochs=10)
+            model.save(modelpickle_filename)
+
+        wv = model.wv
 
 # Some analogies e.g. man : king :: woman : ?queen?
 print(wv.most_similar_cosmul(positive=['woman', 'king'], negative=['man']))
 print(wv.similar_by_word('harry'))
 
-# import pdb; pdb.set_trace()
+import pdb; pdb.set_trace()
 
 if __name__ == '__main__':
     from plotumap import plot_model
