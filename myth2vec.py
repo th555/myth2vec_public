@@ -2,6 +2,7 @@ from gensim.corpora.textcorpus import TextCorpus
 from gensim.models import Word2Vec, FastText
 import os
 import logging
+import numpy as np
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
@@ -9,6 +10,35 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 
 corpus_dir = '../MythFic_txt/'
 assert corpus_dir.endswith('/')
+
+
+characters = [
+'hades',
+'persephone',
+'zeus',
+'apollo',
+'aphrodite',
+'hera',
+'ares',
+'demeter',
+'artemis',
+'athena',
+'achilles',
+'hermes',
+'patroclus',
+'poseidon',
+'dionysus',
+'helen',
+'hephaestus',
+'icarus',
+'odysseus',
+'ariadne',
+'hector',
+'paris',
+'hestia',
+'cassandra',
+'eros',
+]
 
 
 class MythCorpus(TextCorpus):
@@ -90,14 +120,32 @@ else:
     model = Word2Vec(sentences=CorpusIter(corpus), vector_size=300, sg=1, epochs=10)
     model.save(modelpickle_filename)
 
-    wv = model.wv
+wv = model.wv
+emotions = ['anger', 'fear', 'joy', 'sadness', 'disgust', 'surprise']
+
+def emo(word):
+    similarity_tuples = [(wv.similarity(word, emotion), emotion) for emotion in emotions]
+    similarity_tuples.sort(reverse=True)
+    return similarity_tuples
+
+def emo_vector(word):
+    return np.array([wv.similarity(word, emotion) for emotion in emotions])
 
 # Some analogies e.g. man : king :: woman : ?queen?
 print(wv.most_similar_cosmul(positive=['woman', 'king'], negative=['man']))
 print(wv.similar_by_word('harry'))
+
+for personage in characters:
+    print(f'{personage}: {emo(personage)}')
 
 import pdb; pdb.set_trace()
 
 if __name__ == '__main__':
     from plotumap import plot_model
     plot_model(wv)
+
+
+    # from plotemovectors import plot_emo
+    # plot_emo([emo_vector(c) for c in characters], characters, emotions)
+    # # lbls=['killing', 'death', 'fall', 'misery', 'hate', 'love', 'pleasant', 'beautiful', 'nice']
+    # plot_emo([emo_vector(wrd) for wrd in lbls], lbls, lbls)

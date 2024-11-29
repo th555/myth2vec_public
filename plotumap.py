@@ -4,7 +4,6 @@ https://gist.github.com/pmbaumgartner/adb33aa486b77ab58eb3df265393195d
 by Peter Baumbartner
 """
 
-import gensim.downloader as gensim_api
 import umap
 import numpy as np
 
@@ -27,7 +26,8 @@ def plot_model(wv, min_count=100):
         logcounts = logcounts[counts>=min_count]
         counts = counts[counts>=min_count]
 
-    embedding = umap.UMAP().fit_transform(vectors)
+    #n_neighbors was default(15)
+    embedding = umap.UMAP(n_neighbors=10).fit_transform(vectors)
 
     tooltips = []
     for word, count in zip(words, counts):
