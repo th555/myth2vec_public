@@ -132,6 +132,7 @@ def emo_vector(word):
     return np.array([wv.similarity(word, emotion) for emotion in emotions])
 
 # Some analogies e.g. man : king :: woman : ?queen?
+""" https://radimrehurek.com/gensim/models/keyedvectors.html """
 print(wv.most_similar_cosmul(positive=['woman', 'king'], negative=['man']))
 print(wv.similar_by_word('harry'))
 
