@@ -3,6 +3,8 @@ from gensim.models import Word2Vec, FastText
 import os
 import logging
 import numpy as np
+from matplotlib import pyplot as plt
+from radar_chart import radar_factory
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
@@ -121,11 +123,12 @@ else:
     model.save(modelpickle_filename)
 
 wv = model.wv
-emotions = ['anger', 'fear', 'joy', 'sadness', 'disgust', 'surprise']
+emotions = ['joy', 'fear', 'surprise', 'sadness', 'disgust', 'anger']
 
-def emo(word):
+def emo(word, sortit=False):
     similarity_tuples = [(wv.similarity(word, emotion), emotion) for emotion in emotions]
-    similarity_tuples.sort(reverse=True)
+    if sortit:
+        similarity_tuples.sort(reverse=True)
     return similarity_tuples
 
 def emo_vector(word):
@@ -139,11 +142,41 @@ print(wv.similar_by_word('harry'))
 for personage in characters:
     print(f'{personage}: {emo(personage)}')
 
-import pdb; pdb.set_trace()
-
 if __name__ == '__main__':
-    from plotumap import plot_model
-    plot_model(wv)
+    """ radar chart loosely adapted from https://python-graph-gallery.com/390-basic-radar-chart/ """
+
+    for char in characters:
+        N = len(emotions)
+        values = emo_vector(char)
+        angles = np.linspace(0, 2*np.pi, N+1)
+        # Initialise the spider plot
+        ax = plt.subplot(111, polar=True)
+         
+        # Draw one axe per variable + add labels
+        plt.xticks(angles[:-1], emotions, color='grey', size=8)
+         
+        # Draw ylabels
+        ax.set_rlabel_position(0)
+        ax.set_theta_zero_location("N")
+        # plt.yticks([10,20,30], ["10","20","30"], color="grey", size=7)
+        plt.ylim(0,0.3)
+
+        # Note: we need to repeat the first value to close the circular graph
+        values_circ = list(values) + [values[0]]
+        # Plot data
+        ax.plot(angles, values_circ, linewidth=1, linestyle='solid')
+
+        # Fill area
+        ax.fill(angles, values_circ, 'b', alpha=0.1)
+        ax.set_title(char, weight='bold', size='medium')
+
+        os.makedirs('radarplots', exist_ok=True)
+        plt.savefig(f'radarplots/{char}.png')
+        plt.clf()
+
+
+    # from plotumap import plot_model
+    # plot_model(wv)
 
 
     # from plotemovectors import plot_emo
