@@ -301,14 +301,15 @@ def plot_genre_radars(wv):
         values_angst_circ = list(values_angst) + [values_angst[0]]
         values_fluff_circ = list(values_fluff) + [values_fluff[0]]
         # Plot data
-        ax.plot(angles, values_fluff_circ, linewidth=1, linestyle='solid', color='b')
-        ax.plot(angles, values_angst_circ, linewidth=1, linestyle='solid', color='r')
+        ax.plot(angles, values_fluff_circ, linewidth=1, linestyle='solid', color='b', label='fluff')
+        ax.plot(angles, values_angst_circ, linewidth=1, linestyle='solid', color='r', label='angst')
 
         # Fill area
         ax.fill(angles, values_fluff_circ, 'b', alpha=0.1)
         ax.fill(angles, values_angst_circ, 'r', alpha=0.1)
 
         ax.set_title(char, weight='bold', size='medium')
+        ax.legend()
 
         os.makedirs('genreradarplots', exist_ok=True)
         plt.savefig(f'genreradarplots/{char}.png')
