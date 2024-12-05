@@ -278,8 +278,11 @@ def plot_basic_radars(wv):
 def plot_genre_radars(wv):
     for char in characters:
         N = len(emotions)
-        values_angst = emo_vector(f'angst_{char}', wv)
-        values_fluff = emo_vector(f'fluff_{char}', wv)
+        try:
+            values_angst = emo_vector(f'angst_{char}', wv)
+            values_fluff = emo_vector(f'fluff_{char}', wv)
+        except KeyError:
+            print(f'{char} does not have both fluff and angst occurrences')
 
         angles = np.linspace(0, 2*np.pi, N+1)
         # Initialise the spider plot
@@ -326,7 +329,6 @@ if __name__ == '__main__':
 
     corpus_genre = load_or_make_genre_corpus()
     model_genre = load_or_make_model(corpus_genre, 'w2v_genre_modelpickle')
-    import pdb; pdb.set_trace()
     plot_genre_radars(model_genre.wv)
 
 
