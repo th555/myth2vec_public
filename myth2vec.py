@@ -283,6 +283,7 @@ def plot_genre_radars(wv):
             values_fluff = emo_vector(f'fluff_{char}', wv)
         except KeyError:
             print(f'{char} does not have both fluff and angst occurrences')
+            continue
 
         angles = np.linspace(0, 2*np.pi, N+1)
         # Initialise the spider plot
