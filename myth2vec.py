@@ -5,6 +5,7 @@ import logging
 import numpy as np
 from matplotlib import pyplot as plt
 from radar_chart import radar_factory
+import csv
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
@@ -12,6 +13,8 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 
 corpus_dir = '../MythFic_txt/'
 assert corpus_dir.endswith('/')
+
+metadata_file = '../fanfics_Greek_myth_metadata.csv'
 
 
 characters = [
@@ -93,14 +96,76 @@ class MythCorpus(TextCorpus):
 
         self.length = num_texts
 
-corpuspickle_filename = f'{corpus_dir[:-1]}.corpuspickle'
-if os.path.exists(corpuspickle_filename):
-    print("LOADING SAVED CORPUS PICKLE")
-    corpus = MythCorpus.load(corpuspickle_filename)
-else:
-    print("BUILDING NEW CORPUS AND SAVING WHEN DONE")
-    corpus = MythCorpus(corpus_dir)
-    corpus.save(corpuspickle_filename)
+class MythCorpusGenreSplit(TextCorpus):
+    """
+    Same as above, but prepends genres to characters (e.g. fluff_hades)
+    """
+    max_chunk_size = 10000 # Break up lines longer than this, note that gensim word2vec silently truncates everything to 10k words
+
+    def __init__(self, *args, **kwargs):
+        fluff_ids = set()
+        angst_ids = set()
+        with open(metadata_file, newline='') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                tags = row['additional tags'].lower().split(', ')
+                if 'fluff' in tags and not 'angst' in tags:
+                    fluff_ids.add(row['work_id'])
+                if 'angst' in tags and not 'fluff' in tags:
+                    angst_ids.add(row['work_id'])
+
+        import pdb; pdb.set_trace()
+
+        super().__init__(self, *args, **kwargs)
+
+    def getstream(self):
+        num_texts = 0
+        for i, filename in enumerate(os.listdir(self.input)):
+            if not filename.endswith('.txt'):
+                continue
+            filepath = os.path.join(corpus_dir, filename)
+            with open(filepath, 'r') as f:
+                for line in f.readlines():
+                    if not line.strip():
+                        continue
+                    if line.count(' ') < self.max_chunk_size:
+                        yield line
+                        num_texts += 1
+                    else:
+                        print("SPLITTING")
+                        restline = line
+                        while restline:
+                            # Chunk line to get around the (silent) 10k word limit in word2vec
+                            chunkbound = 0
+                            for _ in range(self.max_chunk_size):
+                                chunkbound = restline.find(' ', chunkbound+1)
+                            if chunkbound == -1:
+                                yield restline
+                                break
+                            else:
+                                yield restline[:chunkbound]
+                            num_texts += 1
+
+                            restline = restline[chunkbound+1:]
+                            if restline.count(' ') < self.max_chunk_size:
+                                print(restline.count(' '))
+                                yield restline
+                                num_texts += 1
+                                break
+
+        self.length = num_texts
+
+
+def load_or_make_basic_corpus():
+    corpuspickle_filename = f'{corpus_dir[:-1]}.corpuspickle'
+    if os.path.exists(corpuspickle_filename):
+        print("LOADING SAVED CORPUS PICKLE")
+        corpus = MythCorpus.load(corpuspickle_filename)
+    else:
+        print("BUILDING NEW CORPUS AND SAVING WHEN DONE")
+        corpus = MythCorpus(corpus_dir)
+        corpus.save(corpuspickle_filename)
+    return corpus
 
 class CorpusIter:
     """ Get the preprocessed sentences from the corpus in plaintext form, instead of
@@ -111,43 +176,34 @@ class CorpusIter:
     def __iter__(self):
         return corpus.get_texts()
 
+def load_or_make_model(corpus, pickle_suffix):
+    """ Use another pickle_suffix when making a new model from another corpus """
+    modelpickle_filename = f'{corpus_dir[:-1]}.{pickle_suffix}'
+    if os.path.exists(modelpickle_filename):
+        print("LOADING SAVED MODEL")
+        model = Word2Vec.load(modelpickle_filename)
+    else:
+        print("BUILDING NEW MODEL AND SAVING WHEN DONE")
+        # sg=1 means use skip-gram, like in the reference paper
+        model = Word2Vec(sentences=CorpusIter(corpus), vector_size=300, sg=1, epochs=10)
+        model.save(modelpickle_filename)
+    return model
 
-modelpickle_filename = f'{corpus_dir[:-1]}.w2v_modelpickle'
-if os.path.exists(modelpickle_filename):
-    print("LOADING SAVED MODEL")
-    model = Word2Vec.load(modelpickle_filename)
-else:
-    print("BUILDING NEW MODEL AND SAVING WHEN DONE")
-    # sg=1 means use skip-gram, like in the reference paper
-    model = Word2Vec(sentences=CorpusIter(corpus), vector_size=300, sg=1, epochs=10)
-    model.save(modelpickle_filename)
-
-wv = model.wv
 emotions = ['joy', 'fear', 'surprise', 'sadness', 'disgust', 'anger']
 
-def emo(word, sortit=False):
+def emo(word, wv, sortit=False):
     similarity_tuples = [(wv.similarity(word, emotion), emotion) for emotion in emotions]
     if sortit:
         similarity_tuples.sort(reverse=True)
     return similarity_tuples
 
-def emo_vector(word):
+def emo_vector(word, wv):
     return np.array([wv.similarity(word, emotion) for emotion in emotions])
 
-# Some analogies e.g. man : king :: woman : ?queen?
-""" https://radimrehurek.com/gensim/models/keyedvectors.html """
-print(wv.most_similar_cosmul(positive=['woman', 'king'], negative=['man']))
-print(wv.similar_by_word('harry'))
-
-for personage in characters:
-    print(f'{personage}: {emo(personage)}')
-
-if __name__ == '__main__':
-    """ radar chart loosely adapted from https://python-graph-gallery.com/390-basic-radar-chart/ """
-
+def plot_basic_radars(wv):
     for char in characters:
         N = len(emotions)
-        values = emo_vector(char)
+        values = emo_vector(char, wv)
         angles = np.linspace(0, 2*np.pi, N+1)
         # Initialise the spider plot
         ax = plt.subplot(111, polar=True)
@@ -173,6 +229,22 @@ if __name__ == '__main__':
         os.makedirs('radarplots', exist_ok=True)
         plt.savefig(f'radarplots/{char}.png')
         plt.clf()
+
+
+if __name__ == '__main__':
+    """ radar chart loosely adapted from https://python-graph-gallery.com/390-basic-radar-chart/ """
+
+    corpus = load_or_make_basic_corpus()
+    model = load_or_make_model(corpus, 'w2v_modelpickle')
+    wv = model.wv
+    # Some analogies e.g. man : king :: woman : ?queen?
+    """ https://radimrehurek.com/gensim/models/keyedvectors.html """
+    print(wv.most_similar_cosmul(positive=['woman', 'king'], negative=['man']))
+    print(wv.similar_by_word('harry'))
+    # plot_basic_radars(wv)
+
+
+
 
 
     # from plotumap import plot_model
