@@ -169,7 +169,6 @@ class MythCorpusGenreSplit(TextCorpus):
             for i, word in enumerate(line):
                 if word in self.characters:
                     line[i] = f'{genre}_{word}'
-                    modified = True
             return line
 
     def get_texts(self):
@@ -220,7 +219,7 @@ class CorpusIter:
         self.corpus = corpus
 
     def __iter__(self):
-        return corpus.get_texts()
+        return self.corpus.get_texts()
 
 def load_or_make_model(corpus, pickle_suffix):
     """ Use another pickle_suffix when making a new model from another corpus """
@@ -276,20 +275,59 @@ def plot_basic_radars(wv):
         plt.savefig(f'radarplots/{char}.png')
         plt.clf()
 
+def plot_genre_radars(wv):
+    for char in characters:
+        N = len(emotions)
+        values_angst = emo_vector(f'angst_{char}', wv)
+        values_fluff = emo_vector(f'fluff_{char}', wv)
+
+        angles = np.linspace(0, 2*np.pi, N+1)
+        # Initialise the spider plot
+        ax = plt.subplot(111, polar=True)
+         
+        # Draw one axe per variable + add labels
+        plt.xticks(angles[:-1], emotions, color='grey', size=8)
+         
+        # Draw ylabels
+        ax.set_rlabel_position(0)
+        ax.set_theta_zero_location("N")
+        # plt.yticks([10,20,30], ["10","20","30"], color="grey", size=7)
+        plt.ylim(0,0.3)
+
+        # Note: we need to repeat the first value to close the circular graph
+        values_angst_circ = list(values_angst) + [values_angst[0]]
+        values_fluff_circ = list(values_fluff) + [values_fluff[0]]
+        # Plot data
+        ax.plot(angles, values_fluff_circ, linewidth=1, linestyle='solid', color='b')
+        ax.plot(angles, values_angst_circ, linewidth=1, linestyle='solid', color='r')
+
+        # Fill area
+        ax.fill(angles, values_fluff_circ, 'b', alpha=0.1)
+        ax.fill(angles, values_angst_circ, 'r', alpha=0.1)
+
+        ax.set_title(char, weight='bold', size='medium')
+
+        os.makedirs('genreradarplots', exist_ok=True)
+        plt.savefig(f'genreradarplots/{char}.png')
+        plt.clf()
+
+
 
 if __name__ == '__main__':
     """ radar chart loosely adapted from https://python-graph-gallery.com/390-basic-radar-chart/ """
 
     corpus = load_or_make_basic_corpus()
     model = load_or_make_model(corpus, 'w2v_modelpickle')
-    wv = model.wv
     # Some analogies e.g. man : king :: woman : ?queen?
     """ https://radimrehurek.com/gensim/models/keyedvectors.html """
-    print(wv.most_similar_cosmul(positive=['woman', 'king'], negative=['man']))
-    print(wv.similar_by_word('harry'))
-    # plot_basic_radars(wv)
+    print(model.wv.most_similar_cosmul(positive=['woman', 'king'], negative=['man']))
+    print(model.wv.similar_by_word('harry'))
+    # plot_basic_radars(model.wv)
 
     corpus_genre = load_or_make_genre_corpus()
+    model_genre = load_or_make_model(corpus_genre, 'w2v_genre_modelpickle')
+    import pdb; pdb.set_trace()
+    plot_genre_radars(model_genre.wv)
 
 
 
