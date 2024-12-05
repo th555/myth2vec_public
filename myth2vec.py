@@ -105,6 +105,8 @@ class MythCorpusGenreSplit(TextCorpus):
     def __init__(self, *args, **kwargs):
         fluff_ids = set()
         angst_ids = set()
+        both_ids = set()
+        neither = set()
         with open(metadata_file, newline='') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
@@ -113,6 +115,10 @@ class MythCorpusGenreSplit(TextCorpus):
                     fluff_ids.add(row['work_id'])
                 if 'angst' in tags and not 'fluff' in tags:
                     angst_ids.add(row['work_id'])
+                if 'angst' in tags and 'fluff' in tags:
+                    both_ids.add(row['work_id'])
+                if not 'angst' in tags and not 'fluff' in tags:
+                    neither.add(row['work_id'])
 
         import pdb; pdb.set_trace()
 
@@ -164,6 +170,17 @@ def load_or_make_basic_corpus():
     else:
         print("BUILDING NEW CORPUS AND SAVING WHEN DONE")
         corpus = MythCorpus(corpus_dir)
+        corpus.save(corpuspickle_filename)
+    return corpus
+
+def load_or_make_genre_corpus():
+    corpuspickle_filename = f'{corpus_dir[:-1]}.genre_corpuspickle'
+    if os.path.exists(corpuspickle_filename):
+        print("LOADING SAVED CORPUS PICKLE")
+        corpus = MythCorpusGenreSplit.load(corpuspickle_filename)
+    else:
+        print("BUILDING NEW CORPUS AND SAVING WHEN DONE")
+        corpus = MythCorpusGenreSplit(corpus_dir)
         corpus.save(corpuspickle_filename)
     return corpus
 
@@ -243,7 +260,7 @@ if __name__ == '__main__':
     print(wv.similar_by_word('harry'))
     # plot_basic_radars(wv)
 
-
+    corpus_genre = load_or_make_genre_corpus()
 
 
 
