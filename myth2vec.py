@@ -102,31 +102,31 @@ class MythCorpusGenreSplit(TextCorpus):
     """
     max_chunk_size = 10000 # Break up lines longer than this, note that gensim word2vec silently truncates everything to 10k words
 
-    def __init__(self, *args, **kwargs):
-        fluff_ids = set()
-        angst_ids = set()
-        both_ids = set()
-        neither = set()
+    def __init__(self, characters, *args, **kwargs):
+        self.characters = set(characters)
+        self.fluff_ids = set()
+        self.angst_ids = set()
         with open(metadata_file, newline='') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 tags = row['additional tags'].lower().split(', ')
                 if 'fluff' in tags and not 'angst' in tags:
-                    fluff_ids.add(row['work_id'])
+                    self.fluff_ids.add(row['work_id'])
                 if 'angst' in tags and not 'fluff' in tags:
-                    angst_ids.add(row['work_id'])
-                if 'angst' in tags and 'fluff' in tags:
-                    both_ids.add(row['work_id'])
-                if not 'angst' in tags and not 'fluff' in tags:
-                    neither.add(row['work_id'])
+                    self.angst_ids.add(row['work_id'])
 
-        import pdb; pdb.set_trace()
-
-        super().__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def getstream(self):
         num_texts = 0
         for i, filename in enumerate(os.listdir(self.input)):
+            ficid = os.path.splitext(filename)[0]
+            genre = None
+            if ficid in self.fluff_ids:
+                genre = 'fluff'
+            elif ficid in self.angst_ids:
+                genre = 'angst'
+
             if not filename.endswith('.txt'):
                 continue
             filepath = os.path.join(corpus_dir, filename)
@@ -135,7 +135,7 @@ class MythCorpusGenreSplit(TextCorpus):
                     if not line.strip():
                         continue
                     if line.count(' ') < self.max_chunk_size:
-                        yield line
+                        yield genre, line
                         num_texts += 1
                     else:
                         print("SPLITTING")
@@ -146,20 +146,49 @@ class MythCorpusGenreSplit(TextCorpus):
                             for _ in range(self.max_chunk_size):
                                 chunkbound = restline.find(' ', chunkbound+1)
                             if chunkbound == -1:
-                                yield restline
+                                yield genre, restline
                                 break
                             else:
-                                yield restline[:chunkbound]
+                                yield genre, restline[:chunkbound]
                             num_texts += 1
 
                             restline = restline[chunkbound+1:]
                             if restline.count(' ') < self.max_chunk_size:
                                 print(restline.count(' '))
-                                yield restline
+                                yield genre, restline
                                 num_texts += 1
                                 break
 
         self.length = num_texts
+
+    def preprocess_genre_characters(self, genre, line):
+        """ caution, modifying input list (line), should not matter in practice though """
+        if genre is None:
+            return line
+        else:
+            for i, word in enumerate(line):
+                if word in self.characters:
+                    line[i] = f'{genre}_{word}'
+                    modified = True
+            return line
+
+    def get_texts(self):
+        """Generate documents from corpus.
+
+        Yields
+        ------
+        list of str
+            Document as sequence of tokens (+ lineno if self.metadata)
+
+        """
+        lines = self.getstream()
+        if self.metadata:
+            for lineno, (genre, line) in enumerate(lines):
+                yield self.preprocess_genre_characters(genre, self.preprocess_text(line)), (lineno,)
+        else:
+            for genre, line in lines:
+                yield self.preprocess_genre_characters(genre, self.preprocess_text(line))
+
 
 
 def load_or_make_basic_corpus():
@@ -180,7 +209,7 @@ def load_or_make_genre_corpus():
         corpus = MythCorpusGenreSplit.load(corpuspickle_filename)
     else:
         print("BUILDING NEW CORPUS AND SAVING WHEN DONE")
-        corpus = MythCorpusGenreSplit(corpus_dir)
+        corpus = MythCorpusGenreSplit(characters, corpus_dir)
         corpus.save(corpuspickle_filename)
     return corpus
 
