@@ -7,6 +7,8 @@ from matplotlib import pyplot as plt
 from radar_chart import radar_factory
 import csv
 import itertools as it
+from collections import defaultdict
+from scipy.stats import ttest_ind
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
@@ -137,6 +139,7 @@ class MythCorpusGenreSplit(TextCorpus):
     max_chunk_size = 10000 # Break up lines longer than this, note that gensim word2vec silently truncates everything to 10k words
 
     def __init__(self, characters, *args, **kwargs):
+        self.genre_char_count = defaultdict(int)
         self.characters = set(characters)
         self.fluff_ids = set()
         self.angst_ids = set()
@@ -154,12 +157,16 @@ class MythCorpusGenreSplit(TextCorpus):
     def getstream(self):
         num_texts = 0
         for i, filename in enumerate(os.listdir(self.input)):
+            self.chars_in_current_doc = set() # only used for counting (in preprocess_genre_characters)
+
             ficid = os.path.splitext(filename)[0]
             genre = None
             if ficid in self.fluff_ids:
                 genre = 'fluff'
+                self.genre_char_count['fluff_total'] += 1
             elif ficid in self.angst_ids:
                 genre = 'angst'
+                self.genre_char_count['angst_total'] += 1
 
             if not filename.endswith('.txt'):
                 continue
@@ -193,17 +200,20 @@ class MythCorpusGenreSplit(TextCorpus):
                                 num_texts += 1
                                 break
 
+            for char in self.chars_in_current_doc:
+                self.genre_char_count[char] += 1
+
         self.length = num_texts
 
     def preprocess_genre_characters(self, genre, line):
         """ caution, modifying input list (line), should not matter in practice though """
-        if genre is None:
-            return line
-        else:
-            for i, word in enumerate(line):
-                if word in self.characters:
+        for i, word in enumerate(line):
+            if word in self.characters:
+                self.chars_in_current_doc.add(f'all_{word}') # Count characters independent of genre
+                if genre is not None:
                     line[i] = f'{genre}_{word}'
-            return line
+                    self.chars_in_current_doc.add(f'{genre}_{word}')
+        return line
 
     def get_texts(self):
         """Generate documents from corpus.
@@ -355,9 +365,14 @@ def plot_violin(wv):
     emotion_data = []
     emotion_labels = []
     for emotion in emotions:
-        emotion_data.append([wv.similarity(emotion, man) for man in men])
-        emotion_data.append([wv.similarity(emotion, woman) for woman in women])
+        emotion_data_man = [wv.similarity(emotion, man) for man in men]
+        emotion_data_woman = [wv.similarity(emotion, woman) for woman in women]
+        emotion_data.append(emotion_data_man)
+        emotion_data.append(emotion_data_woman)
         emotion_labels += [f'male {emotion}', f'female {emotion}']
+
+        print(f'{emotion} male vs. female t-test: {ttest_ind(emotion_data_man, emotion_data_woman)}')
+
     os.makedirs('violinplots', exist_ok=True)
     ax = plt.axes()
     violin = ax.violinplot(emotion_data, showmeans=True)
@@ -378,6 +393,8 @@ def plot_violin_totals(wv):
     for woman in women:
         emotion_women.append(np.mean([wv.similarity(emotion, woman) for emotion in emotions]))
 
+    print(f'all emotions male vs. female t-test: {ttest_ind(emotion_men, emotion_women)}')
+
     os.makedirs('violinplots', exist_ok=True)
     ax = plt.axes()
     violin = ax.violinplot([emotion_men, emotion_women], showmeans=True)
@@ -390,6 +407,13 @@ def plot_violin_totals(wv):
     plt.savefig(f'violinplots/total.png')
     plt.clf()
 
+
+def validate_vsm(wv):
+    from gensim.test.utils import datapath
+    # https://aclweb.org/aclwiki/WordSimilarity-353_Test_Collection_(State_of_the_art)
+    # https://aclweb.org/aclwiki/Analogy_(State_of_the_art)
+    print(wv.evaluate_word_pairs(datapath('wordsim353.tsv')))
+    # print(wv.evaluate_word_analogies(datapath('questions-words.txt')))
 
 
 if __name__ == '__main__':
@@ -406,10 +430,14 @@ if __name__ == '__main__':
     plot_violin_totals(model.wv)
 
     corpus_genre = load_or_make_genre_corpus()
+    print('all', 'fluff', 'angst')
+    for character in characters:
+        print(corpus_genre.genre_char_count[f'all_{character}'], corpus_genre.genre_char_count[f'fluff_{character}'], corpus_genre.genre_char_count[f'angst_{character}'])
     model_genre = load_or_make_model(corpus_genre, 'w2v_genre_modelpickle')
     # plot_genre_radars(model_genre.wv)
 
-
+    # validate_vsm(model.wv)
+    # validate_vsm(model_genre.wv)
 
 
     # from plotumap import plot_model
