@@ -6,6 +6,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from radar_chart import radar_factory
 import csv
+import itertools as it
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
@@ -44,6 +45,39 @@ characters = [
 'cassandra',
 'eros',
 ]
+
+men = [
+'hades',
+'odysseus',
+'zeus',
+'hector',
+'apollo',
+'paris',
+'ares',
+'eros',
+'achilles',
+'hermes',
+'patroclus',
+'poseidon',
+'dionysus',
+'hephaestus',
+'icarus'
+]
+
+women = [
+'persephone',
+'aphrodite',
+'hera',
+'demeter',
+'artemis',
+'athena',
+'helen',
+'ariadne',
+'hestia',
+'cassandra'
+]
+
+
 
 
 class MythCorpus(TextCorpus):
@@ -316,6 +350,46 @@ def plot_genre_radars(wv):
         plt.savefig(f'genreradarplots/{char}.png')
         plt.clf()
 
+def plot_violin(wv):
+    # male - female interspersed in the order of the emotions list
+    emotion_data = []
+    emotion_labels = []
+    for emotion in emotions:
+        emotion_data.append([wv.similarity(emotion, man) for man in men])
+        emotion_data.append([wv.similarity(emotion, woman) for woman in women])
+        emotion_labels += [f'male {emotion}', f'female {emotion}']
+    os.makedirs('violinplots', exist_ok=True)
+    ax = plt.axes()
+    violin = ax.violinplot(emotion_data, showmeans=True)
+    ax.set_xticks(range(1, len(emotion_data)+1), emotion_labels, rotation=45, ha='right')
+
+    for part, color in zip(violin['bodies'], it.cycle(['b','y'])):
+        part.set_color(color)
+
+    plt.tight_layout()
+    plt.savefig(f'violinplots/separate.png')
+    plt.clf()
+
+def plot_violin_totals(wv):
+    emotion_men = []
+    emotion_women = []
+    for man in men:
+        emotion_men.append(np.mean([wv.similarity(emotion, man) for emotion in emotions]))
+    for woman in women:
+        emotion_women.append(np.mean([wv.similarity(emotion, woman) for emotion in emotions]))
+
+    os.makedirs('violinplots', exist_ok=True)
+    ax = plt.axes()
+    violin = ax.violinplot([emotion_men, emotion_women], showmeans=True)
+    ax.set_xticks([1, 2], ['male total emotions', 'female total emotions'], rotation=45, ha='right')
+
+    for part, color in zip(violin['bodies'], it.cycle(['b','y'])):
+        part.set_color(color)
+
+    plt.tight_layout()
+    plt.savefig(f'violinplots/total.png')
+    plt.clf()
+
 
 
 if __name__ == '__main__':
@@ -328,10 +402,13 @@ if __name__ == '__main__':
     print(model.wv.most_similar_cosmul(positive=['woman', 'king'], negative=['man']))
     print(model.wv.similar_by_word('harry'))
     # plot_basic_radars(model.wv)
+    plot_violin(model.wv)
+    plot_violin_totals(model.wv)
 
     corpus_genre = load_or_make_genre_corpus()
     model_genre = load_or_make_model(corpus_genre, 'w2v_genre_modelpickle')
-    plot_genre_radars(model_genre.wv)
+    # plot_genre_radars(model_genre.wv)
+
 
 
 
