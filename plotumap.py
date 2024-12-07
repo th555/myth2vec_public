@@ -1,7 +1,7 @@
 """
 Adapted from
 https://gist.github.com/pmbaumgartner/adb33aa486b77ab58eb3df265393195d
-by Peter Baumbartner
+by Peter Baumgartner
 """
 
 import umap
