@@ -4,7 +4,6 @@ import os
 import logging
 import numpy as np
 from matplotlib import pyplot as plt
-from radar_chart import radar_factory
 import csv
 import itertools as it
 from collections import defaultdict
