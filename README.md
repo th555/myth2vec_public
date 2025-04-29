@@ -1,4 +1,4 @@
-Code to train a word2vec vector-space model on the MythFic corpus (not included), plot emotion associations per character (see `/radarplots/`), emotion associations per character comparing different genres (see `/genreradarplots/`), and distribution of emotion associations (over a larger set of characters) differentiated by gender (see `/violinplots/`)
+Code to train a word2vec vector-space model on the MythFic corpus (not included), plot emotion associations per character (see `/radarplots/`), emotion associations per character comparing different genres (see `/genreradarplots/`), and distribution of emotion associations (over a larger set of characters) differentiated by gender and genre (see `/violinplots/`)
 
 Installation and running
 ------------
