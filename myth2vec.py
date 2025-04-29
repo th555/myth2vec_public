@@ -4,12 +4,15 @@ import os
 import logging
 import numpy as np
 from matplotlib import pyplot as plt
+from radar_chart import radar_factory
 import csv
 import itertools as it
 from collections import defaultdict
 from scipy.stats import ttest_ind
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+
+plt.rcParams['figure.dpi'] = 300
 
 """ Requires corpus as .txt files in ../MythFic_txt/ """
 
@@ -264,6 +267,18 @@ def load_or_make_genre_corpus():
         corpus.save(corpuspickle_filename)
     return corpus
 
+def load_or_make_genre_corpus_extended():
+    corpuspickle_filename = f'{corpus_dir[:-1]}.genre_extended_corpuspickle'
+    if os.path.exists(corpuspickle_filename):
+        print("LOADING SAVED CORPUS PICKLE")
+        corpus = MythCorpusGenreSplit.load(corpuspickle_filename)
+    else:
+        print("BUILDING NEW CORPUS AND SAVING WHEN DONE")
+        corpus = MythCorpusGenreSplit(characters_more, corpus_dir)
+        corpus.save(corpuspickle_filename)
+    return corpus
+
+
 class CorpusIter:
     """ Get the preprocessed sentences from the corpus in plaintext form, instead of
     (numerical) dictionary keys, saves a lot of hassle later. """
@@ -336,7 +351,7 @@ def plot_genre_radars(wv):
         # Initialise the spider plot
         ax = plt.subplot(111, polar=True)
          
-        # Draw one axe per variable + add labels
+        # Draw one ax per variable + add labels
         plt.xticks(angles[:-1], emotions, color='grey', size=8)
          
         # Draw ylabels
@@ -357,7 +372,7 @@ def plot_genre_radars(wv):
 
         ax.set_title(char, weight='bold', size='medium')
         ax.legend()
-
+        plt.tight_layout()
         os.makedirs('genreradarplots', exist_ok=True)
         plt.savefig(f'genreradarplots/{char}.png')
         plt.clf()
@@ -380,7 +395,12 @@ def plot_violin(wv):
     os.makedirs('violinplots', exist_ok=True)
     ax = plt.axes()
     violin = ax.violinplot(emotion_data, showmeans=True)
-    ax.set_xticks(range(1, len(emotion_data)+1), emotion_labels, rotation=45, ha='right')
+    ticklabels = ax.set_xticks(range(1, len(emotion_data)+1), emotion_labels, rotation=45, ha='right')
+    for label in ticklabels:
+        txt = label.label1.get_text()
+        if "joy" in txt or "sadness" in txt:
+            label.label1.set_fontweight('bold')
+
 
     for part, color in zip(violin['bodies'], it.cycle(['b','y'])):
         part.set_color(color)
@@ -413,6 +433,49 @@ def plot_violin_totals(wv):
     plt.savefig(f'violinplots/total.png')
     plt.clf()
 
+def plot_violin_genre(wv):
+    """ Make violin plot of emotions, fluff vs. angst """
+    # fluff - angst interspersed in the order of the emotions list
+    emotion_data = []
+    emotion_labels = []
+    significant_labels = set()
+    for emotion in emotions:
+        emotion_data_fluff = [wv.similarity(emotion, fluff_char) for char in characters_more
+            if (fluff_char := f'fluff_{char}') in wv]
+        emotion_data_angst = [wv.similarity(emotion, angst_char) for char in characters_more
+            if (angst_char := f'angst_{char}') in wv]
+        emotion_data.append(emotion_data_fluff)
+        emotion_data.append(emotion_data_angst)
+        newlabels = [f'fluff {emotion}', f'angst {emotion}']
+        emotion_labels += newlabels
+
+        # Statistical significance
+        pval=ttest_ind(emotion_data_fluff, emotion_data_angst).pvalue
+        significant = pval < 0.05
+        print(f'{emotion} fluff vs. angst t-test: {pval}, significant: {"yes" if pval < 0.05 else "no"}')
+        if significant:
+            significant_labels.update(newlabels)
+
+    print(f"fluff: {len(emotion_data_fluff)} of {len(characters_more)}")
+    print(f"angst: {len(emotion_data_angst)} of {len(characters_more)}")
+
+
+    os.makedirs('violinplots', exist_ok=True)
+    ax = plt.axes()
+    violin = ax.violinplot(emotion_data, showmeans=True)
+    ticklabels = ax.set_xticks(range(1, len(emotion_data)+1), emotion_labels, rotation=45, ha='right')
+    for label in ticklabels:
+        txt = label.label1.get_text()
+        if txt in significant_labels:
+            label.label1.set_fontweight('bold')
+
+    for part, color in zip(violin['bodies'], it.cycle(['b','y'])):
+        part.set_color(color)
+
+    plt.tight_layout()
+    plt.savefig(f'violinplots/separate_by_genre_extended.png')
+    plt.clf()
+
 
 def validate_vsm(wv):
     """ Validate our VSM on the wordsim353 benchmark. For context of these values see
@@ -431,21 +494,32 @@ if __name__ == '__main__':
     corpus = load_or_make_basic_corpus()
     model = load_or_make_model(corpus, 'w2v_modelpickle')
     """ Plot character emotion associations """
-    plot_basic_radars(model.wv)
+    # plot_basic_radars(model.wv)
     """ Plot emotion distribution split by gender """
-    plot_violin(model.wv)
-    plot_violin_totals(model.wv)
+    # plot_violin(model.wv)
+    # plot_violin_totals(model.wv)
 
     """ Load corpus with characters split by genre, and train VSM
     (apart from the difference in characters the rest of this VSM is basically the same as above) """
-    corpus_genre = load_or_make_genre_corpus()
-    count_occurrences(corpus_genre)
-    model_genre = load_or_make_model(corpus_genre, 'w2v_genre_modelpickle')
-    """ Plot emotion associations split by genre """
-    plot_genre_radars(model_genre.wv)
+    # corpus_genre = load_or_make_genre_corpus()
+    # count_occurrences(corpus_genre)
+    # model_genre = load_or_make_model(corpus_genre, 'w2v_genre_modelpickle')
+    # """ Plot emotion associations split by genre """
+    # # plot_genre_radars(model_genre.wv)
+    # """ Plot emotion distribution split by genre """
+    # plot_violin_genre(model_genre.wv)
+
+    """ Genre corpus with extended cast of characters for genre-emotion violin plots """
+    corpus_genre_extended = load_or_make_genre_corpus_extended()
+    count_occurrences(corpus_genre_extended)
+    model_genre_extended = load_or_make_model(corpus_genre_extended, 'w2v_genre_extended_modelpickle')
+    """ Plot emotion distribution split by genre """
+    plot_violin_genre(model_genre_extended.wv)
+
     """ Validate both models """
-    validate_vsm(model.wv)
-    validate_vsm(model_genre.wv)
+    # validate_vsm(model.wv)
+    # validate_vsm(model_genre.wv)
+    validate_vsm(model_genre_extended.wv)
 
     """ To make a t-sne plot of the vector space uncomment this """
     # from plotumap import plot_model
