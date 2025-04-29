@@ -397,6 +397,7 @@ def plot_violin(wv):
     violin = ax.violinplot(emotion_data, showmeans=True)
     ticklabels = ax.set_xticks(range(1, len(emotion_data)+1), emotion_labels, rotation=45, ha='right')
     for label in ticklabels:
+        # TODO this is hardcoded, see plot_violin_genre for how to do it properly
         txt = label.label1.get_text()
         if "joy" in txt or "sadness" in txt:
             label.label1.set_fontweight('bold')
@@ -494,20 +495,20 @@ if __name__ == '__main__':
     corpus = load_or_make_basic_corpus()
     model = load_or_make_model(corpus, 'w2v_modelpickle')
     """ Plot character emotion associations """
-    # plot_basic_radars(model.wv)
+    plot_basic_radars(model.wv)
     """ Plot emotion distribution split by gender """
-    # plot_violin(model.wv)
-    # plot_violin_totals(model.wv)
+    plot_violin(model.wv)
+    plot_violin_totals(model.wv)
 
     """ Load corpus with characters split by genre, and train VSM
     (apart from the difference in characters the rest of this VSM is basically the same as above) """
-    # corpus_genre = load_or_make_genre_corpus()
-    # count_occurrences(corpus_genre)
-    # model_genre = load_or_make_model(corpus_genre, 'w2v_genre_modelpickle')
+    corpus_genre = load_or_make_genre_corpus()
+    count_occurrences(corpus_genre)
+    model_genre = load_or_make_model(corpus_genre, 'w2v_genre_modelpickle')
     # """ Plot emotion associations split by genre """
-    # # plot_genre_radars(model_genre.wv)
+    # plot_genre_radars(model_genre.wv)
     # """ Plot emotion distribution split by genre """
-    # plot_violin_genre(model_genre.wv)
+    plot_violin_genre(model_genre.wv)
 
     """ Genre corpus with extended cast of characters for genre-emotion violin plots """
     corpus_genre_extended = load_or_make_genre_corpus_extended()
@@ -516,9 +517,9 @@ if __name__ == '__main__':
     """ Plot emotion distribution split by genre """
     plot_violin_genre(model_genre_extended.wv)
 
-    """ Validate both models """
-    # validate_vsm(model.wv)
-    # validate_vsm(model_genre.wv)
+    """ Validate all models """
+    validate_vsm(model.wv)
+    validate_vsm(model_genre.wv)
     validate_vsm(model_genre_extended.wv)
 
     """ To make a t-sne plot of the vector space uncomment this """
